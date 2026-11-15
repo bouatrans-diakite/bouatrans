@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0B1F3A"/>
+  <circle cx="256" cy="256" r="196" fill="#FFFFFF" stroke="#F97316" stroke-width="14"/>
+  <path d="M128 280h176v-76c0-18-14-32-32-32H186c-20 0-36 12-44 30l-14 34v44z" fill="#0B1F3A"/>
+  <path d="M304 188h68l22 44v48h-90v-92z" fill="#F97316"/>
+  <circle cx="182" cy="296" r="24" fill="#F97316" stroke="#0B1F3A" stroke-width="8"/>
+  <circle cx="348" cy="296" r="24" fill="#F97316" stroke="#0B1F3A" stroke-width="8"/>
+  <text x="256" y="378" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="44" fill="#0B1F3A">BOUA TRANS</text>
+</svg>

@@ -1,0 +1,840 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerified() && request.auth.token.email == 'bouatrans@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerified() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTrackingCode(code) {
+      return code is string && code.size() >= 5 && code.size() <= 32 && code.matches('^[A-Z0-9\\-]+$');
+    }
+
+    function isValidServiceType(serviceType) {
+      return serviceType in ['express', 'standard', 'pallet', 'moving'];
+    }
+
+    function isValidQuoteStatus(status) {
+      return status in ['pending', 'approved', 'converted', 'rejected'];
+    }
+
+    function isValidShipmentStatus(status) {
+      return status in ['pending_assignment', 'assigned', 'picked_up', 'in_transit', 'delivered'];
+    }
+
+    function isValidVehicleStatus(status) {
+      return status in ['available', 'on_route', 'maintenance'];
+    }
+
+    function isValidVehicleType(vehicleType) {
+      return vehicleType in ['van', 'truck_12t', 'semi_40t'];
+    }
+
+    function isValidTrailerType(trailerType) {
+      return trailerType in ['tautliner', 'frigo', 'fourgon', 'porte_conteneur'];
+    }
+
+    function isValidDriverStatus(status) {
+      return status in ['available', 'on_route', 'rest'];
+    }
+
+    function isValidRouteType(routeType) {
+      return routeType in ['regular', 'punctual'];
+    }
+
+    function isValidRouteStatus(status) {
+      return status in ['planned', 'in_progress', 'completed', 'delayed'];
+    }
+
+    function isValidCargoClass(cargoClass) {
+      return cargoClass in ['general', 'palletized', 'refrigerated', 'industrial', 'moving'];
+    }
+
+    function isValidInvoiceStatus(status) {
+      return status in ['pending', 'paid'];
+    }
+
+    function isValidDocType(docType) {
+      return docType in ['cmr', 'deca', 'facture', 'travel_doc', 'repostaje_ticket'];
+    }
+
+    function isValidDocStatus(status) {
+      return status in ['valid', 'expiring', 'archived'];
+    }
+
+    function isValidPubCategory(cat) {
+      return cat in ['actualite', 'media', 'info', 'document', 'facture', 'voyage', 'camion'];
+    }
+
+    function isValidMediaPlatform(platform) {
+      return platform in ['none', 'youtube', 'facebook', 'tiktok', 'instagram', 'twitter', 'video', 'image', 'file'];
+    }
+
+    function isValidAdminEntry(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 5 && data.email.size() <= 200 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidUserPublic(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'role', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'role', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+        data.role in ['client', 'driver', 'admin'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivate(data) {
+      return data.keys().hasAll(['uid', 'email', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'phone', 'company', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 5 && data.email.size() <= 200 &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 32)) &&
+        (!('company' in data) || (data.company is string && data.company.size() <= 120)) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidQuote(data) {
+      return data.keys().hasAll([
+          'clientId', 'clientName', 'clientEmail', 'clientPhone',
+          'originCity', 'destinationCity', 'weightKg', 'volumeM3',
+          'serviceType', 'estimatedPriceEur', 'distanceKm', 'status',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'clientId', 'clientName', 'clientEmail', 'clientPhone',
+          'originCountry', 'originCity', 'destinationCountry', 'destinationCity',
+          'weightKg', 'volumeM3', 'serviceType', 'estimatedPriceEur',
+          'distanceKm', 'status', 'notes', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.clientId) &&
+        data.clientName is string && data.clientName.size() >= 2 && data.clientName.size() <= 120 &&
+        data.clientEmail is string && data.clientEmail.size() >= 5 && data.clientEmail.size() <= 200 &&
+        data.clientPhone is string && data.clientPhone.size() >= 6 && data.clientPhone.size() <= 32 &&
+        (!('originCountry' in data) || (data.originCountry is string && data.originCountry.size() <= 60)) &&
+        data.originCity is string && data.originCity.size() >= 2 && data.originCity.size() <= 100 &&
+        (!('destinationCountry' in data) || (data.destinationCountry is string && data.destinationCountry.size() <= 60)) &&
+        data.destinationCity is string && data.destinationCity.size() >= 2 && data.destinationCity.size() <= 100 &&
+        data.weightKg is number && data.weightKg > 0 && data.weightKg <= 44000 &&
+        data.volumeM3 is number && data.volumeM3 > 0 && data.volumeM3 <= 120 &&
+        isValidServiceType(data.serviceType) &&
+        data.estimatedPriceEur is number && data.estimatedPriceEur > 0 && data.estimatedPriceEur <= 250000 &&
+        data.distanceKm is number && data.distanceKm > 0 && data.distanceKm <= 10000 &&
+        isValidQuoteStatus(data.status) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShipment(data) {
+      return data.keys().hasAll([
+          'trackingNumber', 'clientId', 'clientName',
+          'originCity', 'destinationCity', 'weightKg', 'volumeM3',
+          'serviceType', 'priceEur', 'status', 'estimatedDelivery',
+          'invoiceNumber', 'invoicePaid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'trackingNumber', 'quoteId', 'clientId', 'clientName',
+          'driverId', 'driverName', 'vehicleId',
+          'originCity', 'destinationCity', 'weightKg', 'volumeM3',
+          'serviceType', 'priceEur', 'status', 'estimatedDelivery',
+          'invoiceNumber', 'invoicePaid', 'podSignedBy',
+          'podSignatureData', 'podPhotoLabel', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidTrackingCode(data.trackingNumber) &&
+        (!('quoteId' in data) || isValidId(data.quoteId)) &&
+        isValidId(data.clientId) &&
+        data.clientName is string && data.clientName.size() >= 2 && data.clientName.size() <= 120 &&
+        (!('driverId' in data) || (data.driverId is string && data.driverId.size() <= 128)) &&
+        (!('driverName' in data) || (data.driverName is string && data.driverName.size() <= 120)) &&
+        (!('vehicleId' in data) || (data.vehicleId is string && data.vehicleId.size() <= 128)) &&
+        data.originCity is string && data.originCity.size() >= 2 && data.originCity.size() <= 100 &&
+        data.destinationCity is string && data.destinationCity.size() >= 2 && data.destinationCity.size() <= 100 &&
+        data.weightKg is number && data.weightKg > 0 && data.weightKg <= 44000 &&
+        data.volumeM3 is number && data.volumeM3 > 0 && data.volumeM3 <= 120 &&
+        isValidServiceType(data.serviceType) &&
+        data.priceEur is number && data.priceEur > 0 && data.priceEur <= 250000 &&
+        isValidShipmentStatus(data.status) &&
+        data.estimatedDelivery is string && data.estimatedDelivery.size() >= 4 && data.estimatedDelivery.size() <= 40 &&
+        data.invoiceNumber is string && data.invoiceNumber.size() >= 4 && data.invoiceNumber.size() <= 40 &&
+        data.invoicePaid is bool &&
+        (!('podSignedBy' in data) || (data.podSignedBy is string && data.podSignedBy.size() <= 120)) &&
+        (!('podSignatureData' in data) || (data.podSignatureData is string && data.podSignatureData.size() <= 150000)) &&
+        (!('podPhotoLabel' in data) || (data.podPhotoLabel is string && data.podPhotoLabel.size() <= 120)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPublicTracking(data) {
+      return data.keys().hasAll([
+          'trackingNumber', 'shipmentId', 'originCity', 'destinationCity',
+          'status', 'serviceType', 'estimatedDelivery',
+          'checkpoints', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'trackingNumber', 'shipmentId', 'originCity', 'destinationCity',
+          'status', 'serviceType', 'estimatedDelivery',
+          'checkpoints', 'updatedAt'
+        ]) &&
+        isValidTrackingCode(data.trackingNumber) &&
+        isValidId(data.shipmentId) &&
+        data.originCity is string && data.originCity.size() >= 2 && data.originCity.size() <= 100 &&
+        data.destinationCity is string && data.destinationCity.size() >= 2 && data.destinationCity.size() <= 100 &&
+        isValidShipmentStatus(data.status) &&
+        isValidServiceType(data.serviceType) &&
+        data.estimatedDelivery is string && data.estimatedDelivery.size() >= 4 && data.estimatedDelivery.size() <= 40 &&
+        data.checkpoints is list && data.checkpoints.size() >= 1 && data.checkpoints.size() <= 6 &&
+        data.checkpoints[0] is string && data.checkpoints[0].size() <= 160 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidVehicle(data) {
+      return data.keys().hasAll([
+          'plateNumber', 'model', 'type', 'capacityKg',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'plateNumber', 'model', 'type', 'capacityKg',
+          'status', 'assignedDriverName', 'assignedTrailerPlate',
+          'nextMaintenanceDate', 'maintenanceNote', 'createdAt', 'updatedAt'
+        ]) &&
+        data.plateNumber is string && data.plateNumber.size() >= 4 && data.plateNumber.size() <= 20 &&
+        data.model is string && data.model.size() >= 2 && data.model.size() <= 80 &&
+        isValidVehicleType(data.type) &&
+        data.capacityKg is number && data.capacityKg > 0 && data.capacityKg <= 44000 &&
+        isValidVehicleStatus(data.status) &&
+        (!('assignedDriverName' in data) || (data.assignedDriverName is string && data.assignedDriverName.size() <= 100)) &&
+        (!('assignedTrailerPlate' in data) || (data.assignedTrailerPlate is string && data.assignedTrailerPlate.size() <= 20)) &&
+        (!('nextMaintenanceDate' in data) || (data.nextMaintenanceDate is string && data.nextMaintenanceDate.size() <= 40)) &&
+        (!('maintenanceNote' in data) || (data.maintenanceNote is string && data.maintenanceNote.size() <= 200)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrailer(data) {
+      return data.keys().hasAll([
+          'plateNumber', 'model', 'trailerType', 'capacityKg',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'plateNumber', 'model', 'trailerType', 'capacityKg',
+          'status', 'assignedVehiclePlate', 'nextMaintenanceDate',
+          'maintenanceNote', 'createdAt', 'updatedAt'
+        ]) &&
+        data.plateNumber is string && data.plateNumber.size() >= 4 && data.plateNumber.size() <= 20 &&
+        data.model is string && data.model.size() >= 2 && data.model.size() <= 80 &&
+        isValidTrailerType(data.trailerType) &&
+        data.capacityKg is number && data.capacityKg > 0 && data.capacityKg <= 44000 &&
+        isValidVehicleStatus(data.status) &&
+        (!('assignedVehiclePlate' in data) || (data.assignedVehiclePlate is string && data.assignedVehiclePlate.size() <= 20)) &&
+        (!('nextMaintenanceDate' in data) || (data.nextMaintenanceDate is string && data.nextMaintenanceDate.size() <= 40)) &&
+        (!('maintenanceNote' in data) || (data.maintenanceNote is string && data.maintenanceNote.size() <= 200)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidDriverRecord(data) {
+      return data.keys().hasAll([
+          'name', 'phone', 'licenseType', 'hubCity', 'status', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'name', 'phone', 'licenseType', 'hubCity', 'status',
+          'assignedVehiclePlate', 'assignedTrailerPlate', 'updatedAt'
+        ]) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 32 &&
+        data.licenseType is string && data.licenseType.size() >= 2 && data.licenseType.size() <= 60 &&
+        data.hubCity is string && data.hubCity.size() >= 2 && data.hubCity.size() <= 80 &&
+        isValidDriverStatus(data.status) &&
+        (!('assignedVehiclePlate' in data) || (data.assignedVehiclePlate is string && data.assignedVehiclePlate.size() <= 20)) &&
+        (!('assignedTrailerPlate' in data) || (data.assignedTrailerPlate is string && data.assignedTrailerPlate.size() <= 20)) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidRouteVoyage(data) {
+      return data.keys().hasAll([
+          'routeCode', 'routeType', 'originCountry', 'originCity',
+          'destinationCountry', 'destinationCity', 'distanceKm',
+          'scheduleOrDate', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'routeCode', 'routeType', 'originCountry', 'originCity',
+          'destinationCountry', 'destinationCity', 'distanceKm',
+          'scheduleOrDate', 'tradeType', 'status', 'driverName', 'vehiclePlate',
+          'trailerPlate', 'createdAt', 'updatedAt'
+        ]) &&
+        data.routeCode is string && data.routeCode.size() >= 3 && data.routeCode.size() <= 32 &&
+        isValidRouteType(data.routeType) &&
+        data.originCountry is string && data.originCountry.size() >= 2 && data.originCountry.size() <= 60 &&
+        data.originCity is string && data.originCity.size() >= 2 && data.originCity.size() <= 100 &&
+        data.destinationCountry is string && data.destinationCountry.size() >= 2 && data.destinationCountry.size() <= 60 &&
+        data.destinationCity is string && data.destinationCity.size() >= 2 && data.destinationCity.size() <= 100 &&
+        data.distanceKm is number && data.distanceKm > 0 && data.distanceKm <= 10000 &&
+        data.scheduleOrDate is string && data.scheduleOrDate.size() >= 2 && data.scheduleOrDate.size() <= 80 &&
+        (!('tradeType' in data) || (data.tradeType is string && data.tradeType.size() >= 2 && data.tradeType.size() <= 100)) &&
+        isValidRouteStatus(data.status) &&
+        (!('driverName' in data) || (data.driverName is string && data.driverName.size() <= 100)) &&
+        (!('vehiclePlate' in data) || (data.vehiclePlate is string && data.vehiclePlate.size() <= 20)) &&
+        (!('trailerPlate' in data) || (data.trailerPlate is string && data.trailerPlate.size() <= 20)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidInvoice(data) {
+      return data.keys().hasAll([
+          'invoiceNumber', 'clientName', 'routeLabel', 'distanceKm', 'weightKg',
+          'serviceType', 'cargoClass', 'htAmountEur', 'tvaAmountEur',
+          'totalTtcEur', 'status', 'issuedAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'invoiceNumber', 'clientName', 'routeLabel', 'distanceKm', 'weightKg',
+          'serviceType', 'cargoClass', 'htAmountEur', 'tvaAmountEur',
+          'totalTtcEur', 'status', 'issuedAt', 'updatedAt'
+        ]) &&
+        data.invoiceNumber is string && data.invoiceNumber.size() >= 4 && data.invoiceNumber.size() <= 40 &&
+        data.clientName is string && data.clientName.size() >= 2 && data.clientName.size() <= 120 &&
+        data.routeLabel is string && data.routeLabel.size() >= 3 && data.routeLabel.size() <= 160 &&
+        data.distanceKm is number && data.distanceKm > 0 && data.distanceKm <= 10000 &&
+        data.weightKg is number && data.weightKg > 0 && data.weightKg <= 44000 &&
+        isValidServiceType(data.serviceType) &&
+        isValidCargoClass(data.cargoClass) &&
+        data.htAmountEur is number && data.htAmountEur > 0 && data.htAmountEur <= 250000 &&
+        data.tvaAmountEur is number && data.tvaAmountEur >= 0 && data.tvaAmountEur <= 100000 &&
+        data.totalTtcEur is number && data.totalTtcEur > 0 && data.totalTtcEur <= 350000 &&
+        isValidInvoiceStatus(data.status) &&
+        data.issuedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll([
+          'threadId', 'senderId', 'senderName', 'senderRole',
+          'recipientName', 'text', 'read', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'threadId', 'senderId', 'senderName', 'senderRole',
+          'recipientName', 'text', 'read', 'createdAt'
+        ]) &&
+        isValidId(data.threadId) &&
+        isValidId(data.senderId) &&
+        data.senderName is string && data.senderName.size() >= 2 && data.senderName.size() <= 100 &&
+        data.senderRole in ['admin', 'driver', 'partner'] &&
+        data.recipientName is string && data.recipientName.size() >= 2 && data.recipientName.size() <= 100 &&
+        data.text is string && data.text.size() >= 1 && data.text.size() <= 1000 &&
+        data.read is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidTransportDocument(data) {
+      return data.keys().hasAll([
+          'docType', 'reference', 'title', 'ownerId', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'docType', 'reference', 'title', 'ownerId', 'linkedTrackingNumber',
+          'vehiclePlate', 'status', 'fileName', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidDocType(data.docType) &&
+        data.reference is string && data.reference.size() >= 3 && data.reference.size() <= 60 &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 140 &&
+        isValidId(data.ownerId) &&
+        (!('linkedTrackingNumber' in data) || (data.linkedTrackingNumber is string && data.linkedTrackingNumber.size() <= 32)) &&
+        (!('vehiclePlate' in data) || (data.vehiclePlate is string && data.vehiclePlate.size() <= 20)) &&
+        isValidDocStatus(data.status) &&
+        (!('fileName' in data) || (data.fileName is string && data.fileName.size() <= 140)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidFuelMileageLog(data) {
+      return data.keys().hasAll([
+          'vehiclePlate', 'driverId', 'driverName', 'station',
+          'liters', 'amountEur', 'odometerKm', 'previousKm', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'vehiclePlate', 'driverId', 'driverName', 'station',
+          'liters', 'amountEur', 'odometerKm', 'previousKm', 'adBlueLiters', 'createdAt'
+        ]) &&
+        data.vehiclePlate is string && data.vehiclePlate.size() >= 4 && data.vehiclePlate.size() <= 20 &&
+        isValidId(data.driverId) &&
+        data.driverName is string && data.driverName.size() >= 2 && data.driverName.size() <= 100 &&
+        data.station is string && data.station.size() >= 2 && data.station.size() <= 120 &&
+        data.liters is number && data.liters > 0 && data.liters <= 2000 &&
+        data.amountEur is number && data.amountEur > 0 && data.amountEur <= 10000 &&
+        data.odometerKm is number && data.odometerKm >= 0 && data.odometerKm <= 5000000 &&
+        data.previousKm is number && data.previousKm >= 0 && data.previousKm <= data.odometerKm &&
+        (!('adBlueLiters' in data) || (data.adBlueLiters is number && data.adBlueLiters >= 0 && data.adBlueLiters <= 300)) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidNewsPublication(data) {
+      return data.keys().hasAll([
+          'title', 'category', 'summary', 'content', 'published', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'title', 'category', 'summary', 'content', 'mediaLabel',
+          'mediaPlatform', 'mediaUrl', 'fileName', 'fileMimeType', 'fileSizeBytes',
+          'capturedSource', 'linkedEntityType', 'linkedEntityId',
+          'published', 'createdAt', 'updatedAt'
+        ]) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+        isValidPubCategory(data.category) &&
+        data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 280 &&
+        data.content is string && data.content.size() >= 1 && data.content.size() <= 2000 &&
+        (!('mediaLabel' in data) || (data.mediaLabel is string && data.mediaLabel.size() <= 140)) &&
+        (!('mediaPlatform' in data) || isValidMediaPlatform(data.mediaPlatform)) &&
+        (!('mediaUrl' in data) || (data.mediaUrl is string && data.mediaUrl.size() <= 500)) &&
+        (!('fileName' in data) || (data.fileName is string && data.fileName.size() <= 180)) &&
+        (!('fileMimeType' in data) || (data.fileMimeType is string && data.fileMimeType.size() <= 120)) &&
+        (!('fileSizeBytes' in data) || (data.fileSizeBytes is number && data.fileSizeBytes >= 0 && data.fileSizeBytes <= 250000000)) &&
+        (!('capturedSource' in data) || (data.capturedSource in ['upload', 'camera_photo', 'camera_video', 'social', 'entity'])) &&
+        (!('linkedEntityType' in data) || (data.linkedEntityType in ['voyage', 'camion', 'chauffeur', 'facture', 'document'])) &&
+        (!('linkedEntityId' in data) || (data.linkedEntityId is string && data.linkedEntityId.size() <= 128)) &&
+        data.published is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSiteContent(data) {
+      return data.keys().hasAll([
+          'heroBadge', 'heroTitle', 'heroDescription', 'hqAddress', 'hqPhone', 'hqEmail', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'heroBadge', 'heroTitle', 'heroDescription', 'bannerText',
+          'hqAddress', 'hqPhone', 'hqEmail', 'footerNote', 'updatedAt'
+        ]) &&
+        data.heroBadge is string && data.heroBadge.size() >= 2 && data.heroBadge.size() <= 180 &&
+        data.heroTitle is string && data.heroTitle.size() >= 2 && data.heroTitle.size() <= 220 &&
+        data.heroDescription is string && data.heroDescription.size() >= 2 && data.heroDescription.size() <= 600 &&
+        (!('bannerText' in data) || (data.bannerText is string && data.bannerText.size() <= 280)) &&
+        data.hqAddress is string && data.hqAddress.size() >= 2 && data.hqAddress.size() <= 200 &&
+        data.hqPhone is string && data.hqPhone.size() >= 6 && data.hqPhone.size() <= 40 &&
+        data.hqEmail is string && data.hqEmail.size() >= 5 && data.hqEmail.size() <= 200 &&
+        (!('footerNote' in data) || (data.footerNote is string && data.footerNote.size() <= 280)) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCmrDocument(data) {
+      return data.keys().hasAll([
+          'ownerId', 'cmrNumber', 'senderName', 'senderAddress', 'consigneeName',
+          'consigneeAddress', 'deliveryPlace', 'pickupPlace', 'pickupDate',
+          'carrierName', 'carrierDniLine', 'goodsDescription', 'packagesCount',
+          'grossWeightKg', 'volumeM3', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'cmrNumber', 'senderName', 'senderAddress', 'consigneeName',
+          'consigneeAddress', 'deliveryPlace', 'pickupPlace', 'pickupDate',
+          'carrierName', 'carrierDniLine', 'carrierPlate', 'goodsDescription',
+          'packagesCount', 'grossWeightKg', 'volumeM3', 'reservations',
+          'instructions', 'establishedAt', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.ownerId) &&
+        data.cmrNumber is string && data.cmrNumber.size() >= 3 && data.cmrNumber.size() <= 40 &&
+        data.senderName is string && data.senderName.size() >= 2 && data.senderName.size() <= 140 &&
+        data.senderAddress is string && data.senderAddress.size() >= 2 && data.senderAddress.size() <= 200 &&
+        data.consigneeName is string && data.consigneeName.size() >= 2 && data.consigneeName.size() <= 140 &&
+        data.consigneeAddress is string && data.consigneeAddress.size() >= 2 && data.consigneeAddress.size() <= 200 &&
+        data.deliveryPlace is string && data.deliveryPlace.size() >= 2 && data.deliveryPlace.size() <= 140 &&
+        data.pickupPlace is string && data.pickupPlace.size() >= 2 && data.pickupPlace.size() <= 140 &&
+        data.pickupDate is string && data.pickupDate.size() >= 2 && data.pickupDate.size() <= 40 &&
+        data.carrierName is string && data.carrierName.size() >= 2 && data.carrierName.size() <= 120 &&
+        data.carrierDniLine is string && data.carrierDniLine.size() >= 3 && data.carrierDniLine.size() <= 80 &&
+        (!('carrierPlate' in data) || (data.carrierPlate is string && data.carrierPlate.size() <= 24)) &&
+        data.goodsDescription is string && data.goodsDescription.size() >= 2 && data.goodsDescription.size() <= 280 &&
+        data.packagesCount is string && data.packagesCount.size() >= 1 && data.packagesCount.size() <= 80 &&
+        data.grossWeightKg is number && data.grossWeightKg >= 0 && data.grossWeightKg <= 44000 &&
+        data.volumeM3 is number && data.volumeM3 >= 0 && data.volumeM3 <= 120 &&
+        (!('reservations' in data) || (data.reservations is string && data.reservations.size() <= 280)) &&
+        (!('instructions' in data) || (data.instructions is string && data.instructions.size() <= 280)) &&
+        (!('establishedAt' in data) || (data.establishedAt is string && data.establishedAt.size() <= 120)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidDecaControl(data) {
+      return data.keys().hasAll([
+          'ownerId', 'reference', 'shipperName', 'shipperNif', 'origin',
+          'destination', 'goodsDescription', 'registrationPlate', 'publicPdfUrl', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'reference', 'shipperName', 'shipperNif', 'origin',
+          'destination', 'goodsDescription', 'registrationPlate', 'weightKg',
+          'driverName', 'publicPdfUrl', 'createdAt'
+        ]) &&
+        isValidId(data.ownerId) &&
+        data.reference is string && data.reference.size() >= 3 && data.reference.size() <= 60 &&
+        data.shipperName is string && data.shipperName.size() >= 2 && data.shipperName.size() <= 140 &&
+        data.shipperNif is string && data.shipperNif.size() >= 4 && data.shipperNif.size() <= 32 &&
+        data.origin is string && data.origin.size() >= 2 && data.origin.size() <= 140 &&
+        data.destination is string && data.destination.size() >= 2 && data.destination.size() <= 140 &&
+        data.goodsDescription is string && data.goodsDescription.size() >= 2 && data.goodsDescription.size() <= 280 &&
+        data.registrationPlate is string && data.registrationPlate.size() >= 3 && data.registrationPlate.size() <= 24 &&
+        (!('weightKg' in data) || (data.weightKg is number && data.weightKg > 0 && data.weightKg <= 44000)) &&
+        (!('driverName' in data) || (data.driverName is string && data.driverName.size() <= 120)) &&
+        data.publicPdfUrl is string && data.publicPdfUrl.size() >= 5 && data.publicPdfUrl.size() <= 300 &&
+        data.createdAt is timestamp;
+    }
+
+    // Trusted Admin Allowlist
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && isVerified() && (request.auth.uid == uid || isAdmin());
+      allow list: if false;
+      allow create, update: if isValidId(uid) && isAdmin() && isValidAdminEntry(incoming()) && incoming().uid == uid;
+      allow delete: if isValidId(uid) && isAdmin();
+    }
+
+    // Split User Collection: Public Non-PII Profile
+    match /users/{uid} {
+      allow get: if isValidId(uid) && isVerified() && (request.auth.uid == uid || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(uid) && isVerified() &&
+        isValidUserPublic(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().uid == uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (incoming().role == 'client' || isAdmin());
+      allow update: if isValidId(uid) && isVerified() &&
+        isValidUserPublic(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            request.auth.uid == uid &&
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(uid) && isAdmin();
+
+      // Split User Collection: Isolated PII
+      match /private/{docId} {
+        allow get: if isValidId(uid) && isValidId(docId) && isVerified() && (request.auth.uid == uid || isAdmin());
+        allow list: if false;
+        allow create: if isValidId(uid) && isValidId(docId) && isVerified() &&
+          isValidUserPrivate(incoming()) &&
+          incoming().uid == uid &&
+          incoming().updatedAt == request.time &&
+          (request.auth.uid == uid || isAdmin());
+        allow update: if isValidId(uid) && isValidId(docId) && isVerified() &&
+          isValidUserPrivate(incoming()) &&
+          incoming().uid == existing().uid &&
+          incoming().updatedAt == request.time &&
+          (request.auth.uid == uid || isAdmin()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['email', 'phone', 'company', 'updatedAt']);
+        allow delete: if isValidId(uid) && isValidId(docId) && isAdmin();
+      }
+    }
+
+    // Quote Requests
+    match /quotes/{quoteId} {
+      allow get: if isValidId(quoteId) && isVerified() && (existing().clientId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().clientId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(quoteId) && isVerified() &&
+        isValidQuote(incoming()) &&
+        incoming().clientId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(quoteId) && isVerified() &&
+        isValidQuote(incoming()) &&
+        incoming().clientId == existing().clientId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            existing().clientId == request.auth.uid &&
+            existing().status == 'pending' &&
+            incoming().status == 'pending' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['notes', 'clientPhone', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(quoteId) && isAdmin();
+    }
+
+    // Operational Shipments (PII / Financial / POD)
+    match /shipments/{shipmentId} {
+      allow get: if isValidId(shipmentId) && isVerified() && (
+        existing().clientId == request.auth.uid ||
+        existing().driverId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isVerified() && (
+        existing().clientId == request.auth.uid ||
+        existing().driverId == request.auth.uid ||
+        isBootstrappedAdmin()
+      );
+      allow create: if isValidId(shipmentId) && isAdmin() &&
+        isValidShipment(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(shipmentId) && isVerified() &&
+        isValidShipment(incoming()) &&
+        incoming().clientId == existing().clientId &&
+        incoming().trackingNumber == existing().trackingNumber &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            existing().driverId == request.auth.uid &&
+            existing().status != 'delivered' &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'podSignedBy', 'podSignatureData', 'podPhotoLabel', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(shipmentId) && isAdmin();
+    }
+
+    // Sanitized Public Tracking Lookup (Single-Document Get Only, No List)
+    match /publicTracking/{trackingNumber} {
+      allow get: if isValidTrackingCode(trackingNumber);
+      allow list: if false;
+      allow create: if isValidTrackingCode(trackingNumber) && isAdmin() &&
+        isValidPublicTracking(incoming()) &&
+        incoming().trackingNumber == trackingNumber &&
+        exists(/databases/$(database)/documents/shipments/$(incoming().shipmentId)) &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidTrackingCode(trackingNumber) && isVerified() &&
+        isValidPublicTracking(incoming()) &&
+        incoming().trackingNumber == existing().trackingNumber &&
+        incoming().shipmentId == existing().shipmentId &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            existing().status != 'delivered' &&
+            get(/databases/$(database)/documents/shipments/$(existing().shipmentId)).data.driverId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'checkpoints', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidTrackingCode(trackingNumber) && isAdmin();
+    }
+
+    // Company Fleet Vehicles (Trucks - Admin only)
+    match /vehicles/{vehicleId} {
+      allow get: if isValidId(vehicleId) && isVerified() && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(vehicleId) && isAdmin() &&
+        isValidVehicle(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(vehicleId) && isAdmin() &&
+        isValidVehicle(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(vehicleId) && isAdmin();
+    }
+
+    // Company Fleet Trailers (Remorques - Admin only)
+    match /trailers/{trailerId} {
+      allow get: if isValidId(trailerId) && isVerified() && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(trailerId) && isAdmin() &&
+        isValidTrailer(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(trailerId) && isAdmin() &&
+        isValidTrailer(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(trailerId) && isAdmin();
+    }
+
+    // Drivers Database & Assignments (Admin only)
+    match /drivers/{driverId} {
+      allow get: if isValidId(driverId) && isVerified() && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update: if isValidId(driverId) && isAdmin() &&
+        isValidDriverRecord(incoming()) &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(driverId) && isAdmin();
+    }
+
+    // European Routes & Voyages (Admin only)
+    match /routes/{routeId} {
+      allow get: if isValidId(routeId) && isVerified() && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(routeId) && isAdmin() &&
+        isValidRouteVoyage(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(routeId) && isAdmin() &&
+        isValidRouteVoyage(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(routeId) && isAdmin();
+    }
+
+    // Billing & Invoice Archive (Admin only)
+    match /invoices/{invoiceId} {
+      allow get: if isValidId(invoiceId) && isVerified() && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(invoiceId) && isAdmin() &&
+        isValidInvoice(incoming()) &&
+        incoming().issuedAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(invoiceId) && isAdmin() &&
+        isValidInvoice(incoming()) &&
+        incoming().issuedAt == existing().issuedAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(invoiceId) && isAdmin();
+    }
+
+    // Real-Time Operational Messaging (Admin or Verified Sender/Participant)
+    match /messages/{messageId} {
+      allow get: if isValidId(messageId) && isVerified() && (
+        existing().senderId == request.auth.uid ||
+        existing().threadId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isVerified() && (
+        existing().senderId == request.auth.uid ||
+        existing().threadId == request.auth.uid ||
+        isBootstrappedAdmin()
+      );
+      allow create: if isValidId(messageId) && isVerified() &&
+        isValidChatMessage(incoming()) &&
+        (incoming().senderId == request.auth.uid || isAdmin()) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(messageId) && isVerified() && (
+        isAdmin() ||
+        (
+          (existing().threadId == request.auth.uid || existing().senderId == request.auth.uid) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['read'])
+        )
+      );
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+
+    // Scanned & Generated Transport Documents (CMR, DECA, Factures, Travel Docs)
+    match /transportDocs/{docId} {
+      allow get: if isValidId(docId) && isVerified() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().ownerId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(docId) && isVerified() &&
+        isValidTransportDocument(incoming()) &&
+        (incoming().ownerId == request.auth.uid || isAdmin()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(docId) && isVerified() &&
+        isValidTransportDocument(incoming()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            existing().ownerId == request.auth.uid &&
+            existing().status != 'archived' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'fileName', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    // Fuel Refills (Repostaje) & Odometer Mileage
+    match /fuelLogs/{logId} {
+      allow get: if isValidId(logId) && isVerified() && (existing().driverId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().driverId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(logId) && isVerified() &&
+        isValidFuelMileageLog(incoming()) &&
+        (incoming().driverId == request.auth.uid || isAdmin()) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(logId) && isAdmin() &&
+        isValidFuelMileageLog(incoming()) &&
+        incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(logId) && isAdmin();
+    }
+
+    // Public News, Media & Traffic Info Publications
+    match /publications/{pubId} {
+      allow get: if isValidId(pubId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(pubId) && (isAdmin() || isVerified()) &&
+        isValidNewsPublication(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(pubId) && isAdmin() &&
+        isValidNewsPublication(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(pubId) && isAdmin();
+    }
+
+    // Public Site CMS Content Configuration
+    match /settings/{docId} {
+      allow get: if isValidId(docId);
+      allow list: if false;
+      allow create, update: if isValidId(docId) && isAdmin() &&
+        isValidSiteContent(incoming()) &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    // International CMR Documents
+    match /cmrs/{cmrId} {
+      allow get: if isValidId(cmrId) && isVerified() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().ownerId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(cmrId) && isVerified() &&
+        isValidCmrDocument(incoming()) &&
+        (incoming().ownerId == request.auth.uid || isAdmin()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(cmrId) && isVerified() &&
+        isValidCmrDocument(incoming()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (existing().ownerId == request.auth.uid || isAdmin());
+      allow delete: if isValidId(cmrId) && isAdmin();
+    }
+
+    // Spanish Administrative Control Documents (DECA + QR)
+    match /decas/{decaId} {
+      allow get: if isValidId(decaId);
+      allow list: if isVerified() && (existing().ownerId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(decaId) && isVerified() &&
+        isValidDecaControl(incoming()) &&
+        (incoming().ownerId == request.auth.uid || isAdmin()) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(decaId) && isAdmin() &&
+        isValidDecaControl(incoming()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(decaId) && isAdmin();
+    }
+  }
+}

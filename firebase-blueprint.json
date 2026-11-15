@@ -1,0 +1,396 @@
+{
+  "entities": {
+    "AdminEntry": {
+      "title": "AdminEntry",
+      "description": "Trusted allowlist entry granting admin privileges to a specific UID.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "UserPublic": {
+      "title": "UserPublic",
+      "description": "Publicly visible non-PII user display profile and role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "role": { "type": "string", "enum": ["client", "driver", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "role", "createdAt", "updatedAt"]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Private PII user metadata isolated from public reads.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "company": { "type": "string", "maxLength": 120 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "updatedAt"]
+    },
+    "Quote": {
+      "title": "Quote",
+      "description": "Spain & Europe freight quote request submitted by a client.",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clientName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "clientEmail": { "type": "string", "format": "email", "maxLength": 200 },
+        "clientPhone": { "type": "string", "minLength": 6, "maxLength": 32 },
+        "originCountry": { "type": "string", "maxLength": 60 },
+        "originCity": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "destinationCountry": { "type": "string", "maxLength": 60 },
+        "destinationCity": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "weightKg": { "type": "number" },
+        "volumeM3": { "type": "number" },
+        "serviceType": { "type": "string", "enum": ["express", "standard", "pallet", "moving"] },
+        "estimatedPriceEur": { "type": "number" },
+        "distanceKm": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "converted", "rejected"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "clientId", "clientName", "clientEmail", "clientPhone",
+        "originCity", "destinationCity", "weightKg", "volumeM3",
+        "serviceType", "estimatedPriceEur", "distanceKm", "status",
+        "createdAt", "updatedAt"
+      ]
+    },
+    "Shipment": {
+      "title": "Shipment",
+      "description": "Active or completed transport order with assignment, invoice, and POD signature.",
+      "type": "object",
+      "properties": {
+        "trackingNumber": { "type": "string", "minLength": 5, "maxLength": 32, "pattern": "^[A-Z0-9\\-]+$" },
+        "clientId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clientName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "driverId": { "type": "string", "maxLength": 128 },
+        "driverName": { "type": "string", "maxLength": 120 },
+        "vehicleId": { "type": "string", "maxLength": 128 },
+        "originCity": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "destinationCity": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "weightKg": { "type": "number" },
+        "volumeM3": { "type": "number" },
+        "serviceType": { "type": "string", "enum": ["express", "standard", "pallet", "moving"] },
+        "priceEur": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending_assignment", "assigned", "picked_up", "in_transit", "delivered"] },
+        "estimatedDelivery": { "type": "string", "maxLength": 40 },
+        "invoiceNumber": { "type": "string", "maxLength": 40 },
+        "invoicePaid": { "type": "boolean" },
+        "podSignedBy": { "type": "string", "maxLength": 120 },
+        "podSignatureData": { "type": "string", "maxLength": 150000 },
+        "podPhotoLabel": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "trackingNumber", "clientId", "clientName", "originCity", "destinationCity",
+        "weightKg", "volumeM3", "serviceType", "priceEur", "status",
+        "estimatedDelivery", "invoiceNumber", "invoicePaid", "createdAt", "updatedAt"
+      ]
+    },
+    "PublicTracking": {
+      "title": "PublicTracking",
+      "description": "Sanitized non-PII tracking lookup record keyed by trackingNumber.",
+      "type": "object",
+      "properties": {
+        "trackingNumber": { "type": "string", "minLength": 5, "maxLength": 32, "pattern": "^[A-Z0-9\\-]+$" },
+        "shipmentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "originCity": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "destinationCity": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "status": { "type": "string", "enum": ["pending_assignment", "assigned", "picked_up", "in_transit", "delivered"] },
+        "serviceType": { "type": "string", "enum": ["express", "standard", "pallet", "moving"] },
+        "estimatedDelivery": { "type": "string", "maxLength": 40 },
+        "checkpoints": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["trackingNumber", "shipmentId", "originCity", "destinationCity", "status", "serviceType", "estimatedDelivery", "checkpoints", "updatedAt"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Fleet tractor/truck managed by Boua Trans operations with mandatory plate and maintenance tracking.",
+      "type": "object",
+      "properties": {
+        "plateNumber": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "model": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "type": { "type": "string", "enum": ["van", "truck_12t", "semi_40t"] },
+        "capacityKg": { "type": "number" },
+        "status": { "type": "string", "enum": ["available", "on_route", "maintenance"] },
+        "assignedDriverName": { "type": "string", "maxLength": 100 },
+        "assignedTrailerPlate": { "type": "string", "maxLength": 20 },
+        "nextMaintenanceDate": { "type": "string", "maxLength": 40 },
+        "maintenanceNote": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["plateNumber", "model", "type", "capacityKg", "status", "createdAt", "updatedAt"]
+    },
+    "Trailer": {
+      "title": "Trailer",
+      "description": "Semi-trailer / remorque fleet record with mandatory plate and maintenance tracking.",
+      "type": "object",
+      "properties": {
+        "plateNumber": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "model": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "trailerType": { "type": "string", "enum": ["tautliner", "frigo", "fourgon", "porte_conteneur"] },
+        "capacityKg": { "type": "number" },
+        "status": { "type": "string", "enum": ["available", "on_route", "maintenance"] },
+        "assignedVehiclePlate": { "type": "string", "maxLength": 20 },
+        "nextMaintenanceDate": { "type": "string", "maxLength": 40 },
+        "maintenanceNote": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["plateNumber", "model", "trailerType", "capacityKg", "status", "createdAt", "updatedAt"]
+    },
+    "DriverRecord": {
+      "title": "DriverRecord",
+      "description": "Driver directory profile with license, hub, and vehicle/trailer assignment.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "phone": { "type": "string", "minLength": 6, "maxLength": 32 },
+        "licenseType": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "hubCity": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "status": { "type": "string", "enum": ["available", "on_route", "rest"] },
+        "assignedVehiclePlate": { "type": "string", "maxLength": 20 },
+        "assignedTrailerPlate": { "type": "string", "maxLength": 20 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone", "licenseType", "hubCity", "status", "updatedAt"]
+    },
+    "RouteVoyage": {
+      "title": "RouteVoyage",
+      "description": "Regular European lines and one-off trips managed by Admin.",
+      "type": "object",
+      "properties": {
+        "routeCode": { "type": "string", "minLength": 3, "maxLength": 32 },
+        "routeType": { "type": "string", "enum": ["regular", "punctual"] },
+        "originCountry": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "originCity": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "destinationCountry": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "destinationCity": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "distanceKm": { "type": "number" },
+        "scheduleOrDate": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "tradeType": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "status": { "type": "string", "enum": ["planned", "in_progress", "completed", "delayed"] },
+        "driverName": { "type": "string", "maxLength": 100 },
+        "vehiclePlate": { "type": "string", "maxLength": 20 },
+        "trailerPlate": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "routeCode", "routeType", "originCountry", "originCity",
+        "destinationCountry", "destinationCity", "distanceKm",
+        "scheduleOrDate", "status", "createdAt", "updatedAt"
+      ]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Admin billing and PDF-ready invoice archive.",
+      "type": "object",
+      "properties": {
+        "invoiceNumber": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "clientName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "routeLabel": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "distanceKm": { "type": "number" },
+        "weightKg": { "type": "number" },
+        "serviceType": { "type": "string", "enum": ["express", "standard", "pallet", "moving"] },
+        "cargoClass": { "type": "string", "enum": ["general", "palletized", "refrigerated", "industrial", "moving"] },
+        "htAmountEur": { "type": "number" },
+        "tvaAmountEur": { "type": "number" },
+        "totalTtcEur": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid"] },
+        "issuedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "invoiceNumber", "clientName", "routeLabel", "distanceKm", "weightKg",
+        "serviceType", "cargoClass", "htAmountEur", "tvaAmountEur",
+        "totalTtcEur", "status", "issuedAt", "updatedAt"
+      ]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Real-time internal operational chat message between admin, drivers, and partners.",
+      "type": "object",
+      "properties": {
+        "threadId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "senderRole": { "type": "string", "enum": ["admin", "driver", "partner"] },
+        "recipientName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["threadId", "senderId", "senderName", "senderRole", "recipientName", "text", "read", "createdAt"]
+    },
+    "TransportDocument": {
+      "title": "TransportDocument",
+      "description": "Scanned or generated CMR, DECA, Invoice, or Travel compliance document.",
+      "type": "object",
+      "properties": {
+        "docType": { "type": "string", "enum": ["cmr", "deca", "facture", "travel_doc", "repostaje_ticket"] },
+        "reference": { "type": "string", "minLength": 3, "maxLength": 60 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "linkedTrackingNumber": { "type": "string", "maxLength": 32 },
+        "vehiclePlate": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["valid", "expiring", "archived"] },
+        "fileName": { "type": "string", "maxLength": 140 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["docType", "reference", "title", "ownerId", "status", "createdAt", "updatedAt"]
+    },
+    "FuelMileageLog": {
+      "title": "FuelMileageLog",
+      "description": "Fuel refill (Repostaje) and odometer mileage log per vehicle and driver.",
+      "type": "object",
+      "properties": {
+        "vehiclePlate": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "driverId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "driverName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "station": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "liters": { "type": "number" },
+        "amountEur": { "type": "number" },
+        "odometerKm": { "type": "number" },
+        "previousKm": { "type": "number" },
+        "adBlueLiters": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["vehiclePlate", "driverId", "driverName", "station", "liters", "amountEur", "odometerKm", "previousKm", "createdAt"]
+    },
+    "NewsPublication": {
+      "title": "NewsPublication",
+      "description": "Public news, social video/photo media, documents, invoices, fleet updates, or traffic info publication managed by Boua Trans.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "category": { "type": "string", "enum": ["actualite", "info", "media", "document", "facture", "voyage", "camion"] },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 280 },
+        "content": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "mediaLabel": { "type": "string", "maxLength": 140 },
+        "mediaPlatform": { "type": "string", "enum": ["none", "youtube", "facebook", "tiktok", "instagram", "twitter", "video", "image", "file"] },
+        "mediaUrl": { "type": "string", "maxLength": 500 },
+        "fileName": { "type": "string", "maxLength": 180 },
+        "fileMimeType": { "type": "string", "maxLength": 120 },
+        "fileSizeBytes": { "type": "number" },
+        "capturedSource": { "type": "string", "enum": ["upload", "camera_photo", "camera_video", "social", "entity"] },
+        "linkedEntityType": { "type": "string", "enum": ["voyage", "camion", "chauffeur", "facture", "document"] },
+        "linkedEntityId": { "type": "string", "maxLength": 128 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "category", "summary", "content", "published", "createdAt", "updatedAt"]
+    },
+    "SiteContent": {
+      "title": "SiteContent",
+      "description": "Editable public showcase CMS content configuration managed by Boua Trans admin.",
+      "type": "object",
+      "properties": {
+        "heroBadge": { "type": "string", "minLength": 2, "maxLength": 180 },
+        "heroTitle": { "type": "string", "minLength": 2, "maxLength": 220 },
+        "heroDescription": { "type": "string", "minLength": 2, "maxLength": 600 },
+        "bannerText": { "type": "string", "maxLength": 280 },
+        "hqAddress": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "hqPhone": { "type": "string", "minLength": 6, "maxLength": 40 },
+        "hqEmail": { "type": "string", "format": "email", "maxLength": 200 },
+        "footerNote": { "type": "string", "maxLength": 280 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["heroBadge", "heroTitle", "heroDescription", "hqAddress", "hqPhone", "hqEmail", "updatedAt"]
+    },
+    "CmrDocument": {
+      "title": "CmrDocument",
+      "description": "International CMR road freight consignment note generated and archived by Boua Trans.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "cmrNumber": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "senderName": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "senderAddress": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "consigneeName": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "consigneeAddress": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "deliveryPlace": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "pickupPlace": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "pickupDate": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "carrierName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "carrierDniLine": { "type": "string", "minLength": 3, "maxLength": 80 },
+        "carrierPlate": { "type": "string", "maxLength": 24 },
+        "goodsDescription": { "type": "string", "minLength": 2, "maxLength": 280 },
+        "packagesCount": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "grossWeightKg": { "type": "number" },
+        "volumeM3": { "type": "number" },
+        "reservations": { "type": "string", "maxLength": 280 },
+        "instructions": { "type": "string", "maxLength": 280 },
+        "establishedAt": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId", "cmrNumber", "senderName", "senderAddress", "consigneeName",
+        "consigneeAddress", "deliveryPlace", "pickupPlace", "pickupDate",
+        "carrierName", "carrierDniLine", "goodsDescription", "packagesCount",
+        "grossWeightKg", "volumeM3", "createdAt", "updatedAt"
+      ]
+    },
+    "DecaControl": {
+      "title": "DecaControl",
+      "description": "Official Spanish Documento de Control Administrativo (DECA) with QR PDF endpoint.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reference": { "type": "string", "minLength": 3, "maxLength": 60 },
+        "shipperName": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "shipperNif": { "type": "string", "minLength": 4, "maxLength": 32 },
+        "origin": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "destination": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "goodsDescription": { "type": "string", "minLength": 2, "maxLength": 280 },
+        "registrationPlate": { "type": "string", "minLength": 3, "maxLength": 24 },
+        "weightKg": { "type": "number" },
+        "driverName": { "type": "string", "maxLength": 120 },
+        "publicPdfUrl": { "type": "string", "minLength": 5, "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId", "reference", "shipperName", "shipperNif", "origin",
+        "destination", "goodsDescription", "registrationPlate", "publicPdfUrl", "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{uid}": { "schema": { "$ref": "#/entities/AdminEntry" }, "description": "Trusted admin allowlist documents." },
+    "/users/{uid}": { "schema": { "$ref": "#/entities/UserPublic" }, "description": "Public user role and display profile." },
+    "/users/{uid}/private/{docId}": { "schema": { "$ref": "#/entities/UserPrivate" }, "description": "Isolated PII storage." },
+    "/quotes/{quoteId}": { "schema": { "$ref": "#/entities/Quote" }, "description": "Spain & Europe client quote requests." },
+    "/shipments/{shipmentId}": { "schema": { "$ref": "#/entities/Shipment" }, "description": "Full shipment operational records." },
+    "/publicTracking/{trackingNumber}": { "schema": { "$ref": "#/entities/PublicTracking" }, "description": "Sanitized tracking lookup." },
+    "/vehicles/{vehicleId}": { "schema": { "$ref": "#/entities/Vehicle" }, "description": "Trucks fleet inventory & maintenance." },
+    "/trailers/{trailerId}": { "schema": { "$ref": "#/entities/Trailer" }, "description": "Semi-trailers & maintenance inventory." },
+    "/drivers/{driverId}": { "schema": { "$ref": "#/entities/DriverRecord" }, "description": "Drivers database & truck/trailer assignment." },
+    "/routes/{routeId}": { "schema": { "$ref": "#/entities/RouteVoyage" }, "description": "Regular lines & punctual European voyages." },
+    "/invoices/{invoiceId}": { "schema": { "$ref": "#/entities/Invoice" }, "description": "Invoice calculations & PDF archive." },
+    "/messages/{messageId}": { "schema": { "$ref": "#/entities/ChatMessage" }, "description": "Real-time operational messaging." },
+    "/transportDocs/{docId}": { "schema": { "$ref": "#/entities/TransportDocument" }, "description": "CMR, DECA, Factures, Travel compliance documents." },
+    "/fuelLogs/{logId}": { "schema": { "$ref": "#/entities/FuelMileageLog" }, "description": "Fleet Repostaje and mileage logs." },
+    "/publications/{pubId}": { "schema": { "$ref": "#/entities/NewsPublication" }, "description": "Public news, social videos/photos, documents, and traffic info." },
+    "/settings/{docId}": { "schema": { "$ref": "#/entities/SiteContent" }, "description": "Public site CMS copy and contact configuration." },
+    "/cmrs/{cmrId}": { "schema": { "$ref": "#/entities/CmrDocument" }, "description": "Generated and archived international CMR documents." },
+    "/decas/{decaId}": { "schema": { "$ref": "#/entities/DecaControl" }, "description": "Official DECA control records with QR PDF verification." }
+  }
+}

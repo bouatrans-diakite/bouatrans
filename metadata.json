@@ -1,0 +1,6 @@
+{
+  "name": "BOUA TRANS — Transport Espagne & Europe",
+  "description": "Plateforme de transport routier en Espagne et en Europe depuis Yuncos (Tolède) : devis européen instantané, suivi temps réel, CMR/DECA, flotte, facturation et messagerie.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
